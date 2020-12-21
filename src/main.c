@@ -260,8 +260,8 @@ int main(int argc,char ** argv){
     MPI_Scatter(matrizA, (w*v)/TAMANHO, MPI_FLOAT, bufferRecvA,(w*v)/TAMANHO, MPI_FLOAT,MASTER,MPI_COMM_WORLD);
 
 	
-	matrizAB = calculaMatriz(bufferRecvA,matrizB,y/TAMANHO,w,v);
-	matrizD = calculaMatriz(matrizAB,matrizC,y/TAMANHO,v,1); 
+	matrizAB = calculaMatriz(bufferRecvA,matrizB,y,w,v);
+	matrizD = calculaMatriz(matrizAB,matrizC,y,v,1); 
 	
 	MPI_Reduce(matrizD ,&reducao, y, MPI_FLOAT, MPI_SUM, MASTER,MPI_COMM_WORLD);
  

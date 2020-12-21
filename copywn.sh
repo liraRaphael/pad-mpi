@@ -1,0 +1,1 @@
+scp /home/r223865/pad-mpi/bin/programa workernode:/home/r223865/pad-mpi/bin/programa 
