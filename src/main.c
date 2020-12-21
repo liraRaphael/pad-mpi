@@ -3,7 +3,7 @@
 #include<stdlib.h>
 #include<time.h>
 #define posicao(I, J, COLUNAS) ((I)*(COLUNAS) + (J))
-#define TAMANHO 4
+#define TAMANHO 8
 #define MASTER 0
 #define WORKER 1
 
@@ -141,7 +141,7 @@ float * lerArquivo(char * path,int dimensaoA,int dimensaoB){
 float * calculaMatriz(float * matrizA, float * matrizB,int dimensaoA,int dimensaoB,int dimensaoC){
 	
 	float
-		* matriz = alocar(y,v);
+		* matriz = alocar(dimensaoA,dimensaoC);
    
 	for(i=0;i<dimensaoA;i++){	       							
 		for(j=0;j<dimensaoB;j++){	         						
@@ -181,7 +181,7 @@ double reducaoMatriz(float * matriz, int dimensaoA, int dimensaoB){
  *
 **/
 int main(int argc,char ** argv){
-	
+
   	// verifica se todos os argumentos estão
 	if(argc < 8){
 		printf("argumentos invalidos!\n");
@@ -249,23 +249,24 @@ int main(int argc,char ** argv){
    		tIni = clock();
 		
 	}  
-	
+
 	//broadcast da matriz C
 	MPI_Bcast(matrizC,v, MPI_FLOAT, MASTER , MPI_COMM_WORLD);	   
-	
+ 
 	//broadcast da matriz B
-	MPI_Bcast(matrizB,y * w, MPI_FLOAT, MASTER , MPI_COMM_WORLD);		
-	
+	MPI_Bcast(matrizB,(w*v), MPI_FLOAT, MASTER , MPI_COMM_WORLD);		
+ 
+
 	//scatter da matriz A    
-    MPI_Scatter(matrizA, (w*v)/TAMANHO, MPI_FLOAT, bufferRecvA,(w*v)/TAMANHO, MPI_FLOAT,MASTER,MPI_COMM_WORLD);
+    MPI_Scatter(matrizA, y * w/TAMANHO, MPI_FLOAT, bufferRecvA, y * w/TAMANHO, MPI_FLOAT,MASTER,MPI_COMM_WORLD);
 
 	
-	matrizAB = calculaMatriz(bufferRecvA,matrizB,y,w,v);
-	matrizD = calculaMatriz(matrizAB,matrizC,y,v,1); 
+	matrizAB = calculaMatriz(bufferRecvA,matrizB,y/TAMANHO,w,v);
+	matrizD = calculaMatriz(matrizAB,matrizC,y/TAMANHO,v,1); 
 	
-	MPI_Reduce(matrizD ,&reducao, y, MPI_FLOAT, MPI_SUM, MASTER,MPI_COMM_WORLD);
+	//MPI_Reduce(matrizD ,&reducao, v, MPI_FLOAT, MPI_SUM, MASTER,MPI_COMM_WORLD);
  
-	//reducao = reducaoMatriz(matrizD,y,1);	
+	//reducao = reducaoMatriz(matrizD,y/TAMANHO,1);	
 	  
 	//mestre
 	if (rank == MASTER){
@@ -280,9 +281,9 @@ int main(int argc,char ** argv){
 		arquivo = fopen(argv[7],"w");
 		
 	  	//faz o loop de gravação
-		for(i=0;i<y;i++){
+		/*for(i=0;i<y;i++){
 			fprintf(arquivo,"%.2f\n",matrizD[i]);
-		}
+		}*/
 		
 		fclose(arquivo);
 	}
