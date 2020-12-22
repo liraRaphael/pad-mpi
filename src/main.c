@@ -195,11 +195,14 @@ int main(int argc,char ** argv){
 		* matrizC, 
 		* matrizD,
 		* matrizAB,
-		* bufferRecvA;
+		* bufferRecvA, * bufferRecvB, * bufferRecvC, * bufferRecvD;
 	
 	
 	double
 	  	reducao;	//salvara o resultado da redução
+               
+   float 
+     teste;
 	  	
 	int 
 		quantProcs, rank; //mpi
@@ -212,13 +215,10 @@ int main(int argc,char ** argv){
   	w = atoi(argv[2]);
   	v = atoi(argv[3]);	
   	
-  	bufferRecvA = alocar((w*v)/TAMANHO,1);
-  	
-  	// aloca os dados nas matrizes  	
-	matrizA = lerArquivo(argv[4],y,w); 
-	matrizB = lerArquivo(argv[5],w,v); 
-	matrizC = lerArquivo(argv[6],v,1); 
-		
+  	bufferRecvA = alocar((w*y)/TAMANHO,1);  
+    bufferRecvB = alocar((w*v)/TAMANHO,1); 
+    bufferRecvC = alocar((v)/TAMANHO,1); 	
+   
 	MPI_Status Stat;
 
 	// Inicializa o MPI
@@ -232,7 +232,10 @@ int main(int argc,char ** argv){
 	
 	//mestre
 	if(rank == MASTER){
-		
+		// aloca os dados nas matrizes  	
+  	matrizA = lerArquivo(argv[4],y,w); 
+  	matrizB = lerArquivo(argv[5],w,v); 
+  	matrizC = lerArquivo(argv[6],v,1); 
 	 		
 		if(y == 0 || w == 0 || v == 0){
 			printf("Valor(es) y,w e/ou v invalido(s)!\n");
@@ -245,31 +248,37 @@ int main(int argc,char ** argv){
 			return 1;
 		}
 		
+     bufferRecvD = alocar(y,1);
+   
 		//grava o tempo incial
    		tIni = clock();
 		
-	}  
+	}  else { 
+    matrizA = alocar(y,w);
+    matrizB = alocar(w,v);
+    matrizC = alocar(v,1);
+  }
 
 	//broadcast da matriz C
 	MPI_Bcast(matrizC,v, MPI_FLOAT, MASTER , MPI_COMM_WORLD);	   
  
 	//broadcast da matriz B
-	MPI_Bcast(matrizB,(w*v), MPI_FLOAT, MASTER , MPI_COMM_WORLD);		
- 
+	MPI_Bcast(matrizB,w*v, MPI_FLOAT, MASTER , MPI_COMM_WORLD);	
 
 	//scatter da matriz A    
-    MPI_Scatter(matrizA, y * w/TAMANHO, MPI_FLOAT, bufferRecvA, y * w/TAMANHO, MPI_FLOAT,MASTER,MPI_COMM_WORLD);
+  //MPI_Scatter(matrizA, y * w/TAMANHO, MPI_FLOAT, bufferRecvA, y * w/TAMANHO, MPI_FLOAT,MASTER,MPI_COMM_WORLD);
+  MPI_Bcast(matrizA,(y * w)/TAMANHO, MPI_FLOAT, MASTER , MPI_COMM_WORLD);	
 
 	
 	matrizAB = calculaMatriz(bufferRecvA,matrizB,y/TAMANHO,w,v);
-	matrizD = calculaMatriz(matrizAB,matrizC,y/TAMANHO,v,1); 
-	
-	//MPI_Reduce(matrizD ,&reducao, v, MPI_FLOAT, MPI_SUM, MASTER,MPI_COMM_WORLD);
- 
-	//reducao = reducaoMatriz(matrizD,y/TAMANHO,1);	
+	matrizD = calculaMatriz(matrizAB,matrizC,y/TAMANHO,v,1); 	 	
+  //printf("%f\n", reducaoMatriz(matrizD,y,1));
+
+	MPI_Reduce(matrizD , bufferRecvD , y/TAMANHO, MPI_FLOAT, MPI_SUM, MASTER,MPI_COMM_WORLD);
 	  
 	//mestre
 	if (rank == MASTER){
+    reducao = reducaoMatriz(bufferRecvD,y,1);	
 		//grava o tempo final
 		tFim = clock();
 		
@@ -281,9 +290,9 @@ int main(int argc,char ** argv){
 		arquivo = fopen(argv[7],"w");
 		
 	  	//faz o loop de gravação
-		/*for(i=0;i<y;i++){
-			fprintf(arquivo,"%.2f\n",matrizD[i]);
-		}*/
+		for(i=0;i<y;i++){
+			fprintf(arquivo,"%.2f\n",bufferRecvD[i]);
+		}
 		
 		fclose(arquivo);
 	}
