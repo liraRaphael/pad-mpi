@@ -138,12 +138,15 @@ float * lerArquivo(char * path,int dimensaoA,int dimensaoB){
 * - Calcula a matriz (A x B)
 *
 */
-float * calculaMatriz(float * matrizA, float * matrizB,int dimensaoA,int dimensaoB,int dimensaoC){
+float * calculaMatriz(float * matrizA, float * matrizB,int dimensaoA,int dimensaoB,int dimensaoC,int rank){
 	
 	float
 		* matriz = alocar(dimensaoA,dimensaoC);
+   int 
+		limitDimA = (rank + 1) * dimensaoA/TAMANHO,
+		start = rank * dimensaoA/TAMANHO;
    
-	for(i=0;i<dimensaoA;i++){	       							
+	for(i=start;i<limitDimA;i++){	       							
 		for(j=0;j<dimensaoB;j++){	         						
 			for(k=0;k<dimensaoC;k++){	
 				matriz[posicao(i,k,dimensaoC)] += (matrizA[posicao(i,j,dimensaoB)] * matrizB[posicao(j,k,dimensaoC)]) ;		 								
@@ -266,19 +269,16 @@ int main(int argc,char ** argv){
 	MPI_Bcast(matrizB,w*v, MPI_FLOAT, MASTER , MPI_COMM_WORLD);	
 
 	//scatter da matriz A    
-  //MPI_Scatter(matrizA, y * w/TAMANHO, MPI_FLOAT, bufferRecvA, y * w/TAMANHO, MPI_FLOAT,MASTER,MPI_COMM_WORLD);
-  MPI_Bcast(matrizA,(y * w)/TAMANHO, MPI_FLOAT, MASTER , MPI_COMM_WORLD);	
-
+  	MPI_Bcast(matrizA,(y * w), MPI_FLOAT, MASTER , MPI_COMM_WORLD);	
 	
-	matrizAB = calculaMatriz(bufferRecvA,matrizB,y/TAMANHO,w,v);
-	matrizD = calculaMatriz(matrizAB,matrizC,y/TAMANHO,v,1); 	 	
-  //printf("%f\n", reducaoMatriz(matrizD,y,1));
+	matrizAB = calculaMatriz(bufferRecvA,matrizB,y,w,v,rank);
+	matrizD = calculaMatriz(matrizAB,matrizC,y,v,1,rank); 	 	
 
 	MPI_Reduce(matrizD , bufferRecvD , y/TAMANHO, MPI_FLOAT, MPI_SUM, MASTER,MPI_COMM_WORLD);
 	  
 	//mestre
 	if (rank == MASTER){
-    reducao = reducaoMatriz(bufferRecvD,y,1);	
+    	reducao = reducaoMatriz(bufferRecvD,y,1);	
 		//grava o tempo final
 		tFim = clock();
 		
